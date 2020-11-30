@@ -39,14 +39,13 @@ data FVect : (capacity : Nat) -> (len : Fin (S capacity)) -> (elem : Type) -> Ty
 ||| stronger bounded Fin.
 public export
 (:::) : {n : Nat} 
-     -> {len' : Fin (S n)} 
+     -> {1 len' : Fin (S n)} 
      -> (v : elem) 
      -> FVect (S n) (weaken len') elem 
      -> FVect (S n) (FS len') elem
-(:::) {n = 0} {len' = FZ}     v _ = [v]
-(:::) {n = 0} {len' = (FS x)} _ _ = absurd x
-(:::) {n = (S k)} {len' = FZ} v _ = [v]
-(:::) {n = (S k)} {len' = (FS x)} v (y :: xs) = v :: (y ::: xs)
+(:::) {n = n}     {len' = FZ}      v _ = [v]
+(:::) {n = 0}     {len' = (FS l')} _ _ = absurd l'
+(:::) {n = (S k)} {len' = (FS l')} v (x :: xs) = v :: (x ::: xs)
 
 ||| Create an empty FVect with the given capacity.
 export
@@ -55,14 +54,14 @@ empty _ = []
 
 ||| Allow FVect to hold one more element. 
 ||| Do not change the elements currently in the FVect.
-export
+public export
 addCapacity : FVect c l a -> (FVect (S c) (weaken l) a)
 addCapacity [] = []
 addCapacity (x :: xs) = x :: (addCapacity xs)
 
 ||| Allow FVect to hold n more elements. 
 ||| Do not change the elements currently in the FVect.
-export
+public export
 addCapacityN : {0 capacity : Nat} 
             -> {0 l : Fin (S capacity)} 
             -> (n : Nat) 
@@ -70,6 +69,24 @@ addCapacityN : {0 capacity : Nat}
             -> (FVect (capacity + n) (weakenN n l) a)
 addCapacityN n [] = Nil
 addCapacityN n (x :: xs) = x :: (addCapacityN n xs)
+
+||| Reduce the FVect's capacity to hold elements.
+public export
+removeCapacity : {n : Nat} 
+              -> {1 len' : Fin (S n)} 
+              -> FVect (S n) (weaken len') a 
+              -> FVect n len' a
+removeCapacity {n = n}     {len' = FZ}      [] = []
+removeCapacity {n = 0}     {len' = (FS l')} (x :: xs) = absurd l'
+removeCapacity {n = (S k)} {len' = (FS l')} (x :: xs) = x :: (removeCapacity xs)
+
+||| Get a Fin (S n) with value n.
+||| In other words, convert the Nat n into the smallest Fin
+||| that can contain it.
+export
+minimalFin : (n : Nat) -> Fin (S n)
+minimalFin 0 = FZ
+minimalFin (S k) = FS $ minimalFin k
 
 ||| Get the length of the FVect.
 ||| Returns a Fin n where n is the capacity of the FVect.
@@ -85,25 +102,94 @@ export
 capacity : {1 c: Nat} -> {0 l : Fin (S c)} -> FVect c l a -> Nat
 capacity _ = c
 
-||| Get a Fin (S n) with value n.
-||| In other words, convert the Nat n into the smallest Fin
-||| that can contain it.
-export
-minimalFin : (n : Nat) -> Fin (S n)
-minimalFin 0 = FZ
-minimalFin (S k) = FS $ minimalFin k
-
 ||| Get the smallest FVect that can contain the given Vect.
 export
 fromVect : {l : Nat} -> Vect l a -> FVect l (minimalFin l) a
 fromVect [] = []
 fromVect (x :: xs) = x :: fromVect xs
 
+export
+toVect : FVect c l elem -> Vect (finToNat l) elem
+toVect [] = []
+toVect (x :: xs) = x :: (toVect xs)
+
+-- toList provided by Foldable/Data.List
+
+||| All but the first element of the FVect.
+||| This operation does not change capacity. This means you can
+||| carry out this operation and retain proof that the new FVect
+||| length is less than or equal to the original FVect (although
+||| in this case the length is exactly one less than before the
+||| call to tail).
+public export
+tail : FVect c (FS l) elem -> FVect c (weaken l) elem
+tail (x :: xs) = addCapacity xs
+
+public export 
+head : FVect c (FS l) elem -> elem
+head (x :: _) = x
+
+public export
+last : FVect c (FS l) elem -> elem
+last [x] = x
+last (x :: (y :: xs)) = last $ y :: xs
+
+||| All but the last element of the FVect.
+||| This operation does not change capacity. This means you can
+||| carry out this operation and retain proof that the new FVect
+||| length is less than or equal to the original FVect (although
+||| in this case the length is exactly one less than before the
+||| call to tail).
+public export
+init : FVect c (FS l) elem -> FVect c (weaken l) elem
+init [_] = []
+init (x :: (y :: xs)) = x :: (init $ y :: xs)
+
+||| Remove all Nothings from the FVect.
+||| This operation does not change capacity. That means you can
+||| carry out this operation and retain proof that the new FVect
+||| length is less than or equal to that of the original FVect.
+export
+catMaybes : {capacity : Nat} 
+         -> {len : Fin (S capacity)} 
+         -> FVect capacity len (Maybe elem) 
+         -> (len' : Fin (S capacity) ** FVect capacity len' elem)
+catMaybes {len = FZ} [] = (FZ ** [])
+catMaybes {len = (FS k)} (Nothing  :: xs) = let (l' ** rest) = catMaybes xs in
+                                              (weaken l' ** addCapacity rest)
+catMaybes {len = (FS k)} ((Just x) :: xs) = let (l' ** rest) = catMaybes xs in
+                                              (FS l' ** x :: rest)
+
+||| Filter down to only elements matching the predicate.
+||| This operation does not change capacity. That means you can
+||| carry out this operation and retain proof that the new FVect
+||| length is less than or equal to that of the original FVect.
+export
+filter : {capacity : Nat}
+      -> {len : Fin (S capacity)}
+      -> (elem -> Bool)
+      -> FVect capacity len elem
+      -> (len' : Fin (S capacity) ** FVect capacity len' elem)
+filter p [] = (FZ ** [])
+filter p (x :: xs) = let (l' ** rest) = filter p xs in
+                         if p x
+                            then (FS l' ** x :: rest)
+                            else (weaken l' ** addCapacity rest)
+
 --
--- TMP
+-- Functor
 --
 
-test : String
-test = let v : FVect _ _ Int = 1 :: (empty 3) in
-             let v2 = 2 :: v in
-               ?test_rhs
+Functor (FVect c l) where
+  map f [] = []
+  map f (x :: xs) = f x :: map f xs
+
+--
+-- Foldable
+--
+
+Foldable (FVect c l) where
+  foldr _ acc [] = acc
+  foldr f acc (x :: xs) = f x $ foldr f acc xs
+
+
