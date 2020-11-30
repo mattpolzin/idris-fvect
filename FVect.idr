@@ -3,6 +3,7 @@ module FVect
 import Data.Vect
 import Data.Fin
 import Data.Nat
+import Decidable.Equality
 
 %default total
 
@@ -176,6 +177,11 @@ filter p (x :: xs) = let (l' ** rest) = filter p xs in
                             then (FS l' ** x :: rest)
                             else (weaken l' ** addCapacity rest)
 
+||| If two FVects are equal, their heads and tails are equal.
+export
+fVectInjective : {0 xs : FVect c l elem} -> {0 ys : FVect c l elem} -> x :: xs = y :: ys -> (x = y, xs = ys)
+fVectInjective Refl = (Refl, Refl)
+
 --
 -- Functor
 --
@@ -191,5 +197,17 @@ Functor (FVect c l) where
 Foldable (FVect c l) where
   foldr _ acc [] = acc
   foldr f acc (x :: xs) = f x $ foldr f acc xs
+
+--
+-- DecEq
+--
+
+export
+DecEq elem => DecEq (FVect c l elem) where
+  decEq [] [] = Yes Refl
+  decEq (x :: xs) (y :: ys) with (decEq x y, decEq xs ys)
+    decEq (y :: ys) (y :: ys) | (Yes Refl, Yes Refl)  = Yes Refl
+    decEq (x :: xs) (y :: ys) | (_,        No contra) = No $ contra . snd . fVectInjective
+    decEq (x :: xs) (y :: ys) | (No contra, _)        = No $ contra . fst . fVectInjective
 
 
