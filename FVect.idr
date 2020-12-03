@@ -81,14 +81,6 @@ removeCapacity {n = n}     {len' = FZ}      [] = []
 removeCapacity {n = 0}     {len' = (FS l')} (x :: xs) = absurd l'
 removeCapacity {n = (S k)} {len' = (FS l')} (x :: xs) = x :: (removeCapacity xs)
 
-||| Get a Fin (S n) with value n.
-||| In other words, convert the Nat n into the smallest Fin
-||| that can contain it.
-export
-minimalFin : (n : Nat) -> Fin (S n)
-minimalFin 0 = FZ
-minimalFin (S k) = FS $ minimalFin k
-
 ||| Get the length of the FVect.
 ||| Returns a Fin n where n is the capacity of the FVect.
 export
@@ -103,9 +95,13 @@ export
 capacity : {1 c: Nat} -> {0 l : Fin (S c)} -> FVect c l a -> Nat
 capacity _ = c
 
+--
+-- to/from List and Vect
+--
+
 ||| Get the smallest FVect that can contain the given Vect.
 export
-fromVect : {l : Nat} -> Vect l a -> FVect l (minimalFin l) a
+fromVect : {l : Nat} -> Vect l a -> FVect l (last {n=l}) a
 fromVect [] = []
 fromVect (x :: xs) = x :: fromVect xs
 
@@ -116,6 +112,10 @@ toVect (x :: xs) = x :: (toVect xs)
 
 -- toList provided by Foldable/Data.List
 
+--
+-- Accessors
+--
+
 ||| All but the first element of the FVect.
 ||| This operation does not change capacity. This means you can
 ||| carry out this operation and retain proof that the new FVect
@@ -125,6 +125,12 @@ toVect (x :: xs) = x :: (toVect xs)
 public export
 tail : FVect c (FS l) elem -> FVect c (weaken l) elem
 tail (x :: xs) = addCapacity xs
+
+||| Like tail but reduces the capacity by 1 in addition
+||| to dropping the first element.
+public export
+dropFirst : FVect (S c) (FS l) elem -> FVect c l elem
+dropFirst (x :: xs) = xs
 
 public export 
 head : FVect c (FS l) elem -> elem
@@ -146,6 +152,66 @@ init : FVect c (FS l) elem -> FVect c (weaken l) elem
 init [_] = []
 init (x :: (y :: xs)) = x :: (init $ y :: xs)
 
+||| Like init but reduces the capacity by 1 in addition
+||| to removing the last element.
+public export
+dropLast : FVect (S c) (FS l) elem -> FVect c l elem
+dropLast [_] = []
+dropLast (x :: (y :: xs)) = x :: (dropLast $ y :: xs)
+
+--
+-- Properties
+--
+
+||| If two FVects are equal, their heads and tails are equal.
+export
+fVectInjective : {0 xs : FVect c l elem} 
+              -> {0 ys : FVect c l elem} 
+              -> x :: xs = y :: ys 
+              -> (x = y, xs = ys)
+fVectInjective Refl = (Refl, Refl)
+
+--
+-- Functor
+--
+
+export
+Functor (FVect c l) where
+  map f [] = []
+  map f (x :: xs) = f x :: map f xs
+
+--
+-- Foldable
+--
+
+export
+Foldable (FVect c l) where
+  foldr _ acc [] = acc
+  foldr f acc (x :: xs) = f x $ foldr f acc xs
+
+--
+-- Eq/DecEq
+--
+
+export
+Eq elem => Eq (FVect c l elem) where
+  [] == [] = True
+  (x :: xs) == (y :: ys) = if x == y
+                              then xs == ys
+                              else False
+
+export
+DecEq elem => DecEq (FVect c l elem) where
+  decEq [] [] = Yes Refl
+  decEq (x :: xs) (y :: ys) with (decEq x y, decEq xs ys)
+    decEq (y :: ys) (y :: ys) | (Yes Refl, Yes Refl)  = Yes Refl
+    decEq (x :: xs) (y :: ys) | (_,        No contra) = No $ contra . snd . fVectInjective
+    decEq (x :: xs) (y :: ys) | (No contra, _)        = No $ contra . fst . fVectInjective
+
+--
+-- Utility
+--
+
 ||| Remove all Nothings from the FVect.
 ||| This operation does not change capacity. That means you can
 ||| carry out this operation and retain proof that the new FVect
@@ -160,6 +226,23 @@ catMaybes {len = (FS k)} (Nothing  :: xs) = let (l' ** rest) = catMaybes xs in
                                               (weaken l' ** addCapacity rest)
 catMaybes {len = (FS k)} ((Just x) :: xs) = let (l' ** rest) = catMaybes xs in
                                               (FS l' ** x :: rest)
+
+||| Map all elements, removing any Nothings along the way.
+||| This operation does not change capacity. That means you can
+||| carry out this operation and retain proof that the new FVect
+||| length is less than or equal to that of the original FVect.
+export
+mapMaybes : {capacity : Nat}
+         -> {len : Fin (S capacity)}
+         -> (f : elem -> Maybe elem')
+         -> FVect capacity len elem
+         -> (len' : Fin (S capacity) ** FVect capacity len' elem')
+mapMaybes {len = FZ} f [] = (FZ ** [])
+mapMaybes {len = (FS k)} f (x :: xs) = case (f x) of
+                                            Nothing => let (l' ** rest) = mapMaybes f xs in
+                                                           (weaken l' ** addCapacity rest)
+                                            (Just y) => let (l' ** rest) = mapMaybes f xs in
+                                                            (FS l' ** y :: rest)
 
 ||| Filter down to only elements matching the predicate.
 ||| This operation does not change capacity. That means you can
@@ -176,38 +259,5 @@ filter p (x :: xs) = let (l' ** rest) = filter p xs in
                          if p x
                             then (FS l' ** x :: rest)
                             else (weaken l' ** addCapacity rest)
-
-||| If two FVects are equal, their heads and tails are equal.
-export
-fVectInjective : {0 xs : FVect c l elem} -> {0 ys : FVect c l elem} -> x :: xs = y :: ys -> (x = y, xs = ys)
-fVectInjective Refl = (Refl, Refl)
-
---
--- Functor
---
-
-Functor (FVect c l) where
-  map f [] = []
-  map f (x :: xs) = f x :: map f xs
-
---
--- Foldable
---
-
-Foldable (FVect c l) where
-  foldr _ acc [] = acc
-  foldr f acc (x :: xs) = f x $ foldr f acc xs
-
---
--- DecEq
---
-
-export
-DecEq elem => DecEq (FVect c l elem) where
-  decEq [] [] = Yes Refl
-  decEq (x :: xs) (y :: ys) with (decEq x y, decEq xs ys)
-    decEq (y :: ys) (y :: ys) | (Yes Refl, Yes Refl)  = Yes Refl
-    decEq (x :: xs) (y :: ys) | (_,        No contra) = No $ contra . snd . fVectInjective
-    decEq (x :: xs) (y :: ys) | (No contra, _)        = No $ contra . fst . fVectInjective
 
 
