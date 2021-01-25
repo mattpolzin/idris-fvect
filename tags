@@ -1,0 +1,35 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+(	FVect.idr	/^  (::) : {capacity : Nat} $/;"	d
+(	FVect.idr	/^(:::) : {n : Nat} $/;"	d
+(	FVect.idr	/^(:::) {n = (S k)} {len' = (FS l')} v (x :: xs) = v :: (x ::: xs)$/;"	d
+(	FVect.idr	/^(:::) {n = 0}     {len' = (FS l')} _ _ = absurd l'$/;"	d
+(	FVect.idr	/^(:::) {n = n}     {len' = FZ}      v _ = [v]$/;"	d
+(x	FVect.idr	/^  (x :: xs) == (y :: ys) = if x == y$/;"	d
+FVect	FVect.idr	/^data FVect : (capacity : Nat) -> (len : Fin (S capacity)) -> (elem : Type) -> Type where$/;"	t
+IDRIS	Makefile	/^IDRIS := idris2$/;"	m
+Nil	FVect.idr	/^  Nil : {capacity : Nat } -> FVect capacity FZ elem$/;"	d
+PACKAGE	Makefile	/^PACKAGE = fvect.ipkg$/;"	m
+addCapacity	FVect.idr	/^addCapacity : FVect c l a -> (FVect (S c) (weaken l) a)$/;"	d
+addCapacityN	FVect.idr	/^addCapacityN : {0 capacity : Nat} $/;"	d
+capacity	FVect.idr	/^capacity : {1 c: Nat} -> {0 l : Fin (S c)} -> FVect c l a -> Nat$/;"	d
+catMaybes	FVect.idr	/^catMaybes : {capacity : Nat} $/;"	d
+dropFirst	FVect.idr	/^dropFirst : FVect (S c) (FS l) elem -> FVect c l elem$/;"	d
+dropLast	FVect.idr	/^dropLast : FVect (S c) (FS l) elem -> FVect c l elem$/;"	d
+empty	FVect.idr	/^empty : (capacity : Nat) -> FVect capacity FZ elem$/;"	d
+fVectInjective	FVect.idr	/^fVectInjective : {0 xs : FVect c l elem} $/;"	d
+filter	FVect.idr	/^filter : {capacity : Nat}$/;"	d
+fromVect	FVect.idr	/^fromVect : {l : Nat} -> Vect l a -> FVect l (last {n=l}) a$/;"	d
+head	FVect.idr	/^head : FVect c (FS l) elem -> elem$/;"	d
+init	FVect.idr	/^init : FVect c (FS l) elem -> FVect c (weaken l) elem$/;"	d
+last	FVect.idr	/^last : FVect c (FS l) elem -> elem$/;"	d
+length	FVect.idr	/^length : {0 capacity : Nat} $/;"	d
+mapMaybes	FVect.idr	/^mapMaybes : {capacity : Nat}$/;"	d
+removeCapacity	FVect.idr	/^removeCapacity : {n : Nat} $/;"	d
+tail	FVect.idr	/^tail : FVect c (FS l) elem -> FVect c (weaken l) elem$/;"	d
+tmp	FVect.idr	/^tmp : FVect 3 ? Char$/;"	d
+toVect	FVect.idr	/^toVect : FVect c l elem -> Vect (finToNat l) elem$/;"	d
