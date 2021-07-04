@@ -5,6 +5,9 @@ import Data.Fin
 import Data.Nat
 import Decidable.Equality
 
+%hide Data.Vect.elem
+%hide Prelude.Types.elem
+
 %default total
 
 ||| A Fin-based Vect. Can be thought of as a Vect with both a length and
@@ -13,18 +16,20 @@ import Decidable.Equality
 ||| length has not increased over the course of a series of operations.
 public export
 data FVect : (capacity : Nat) -> (len : Fin (S capacity)) -> (elem : Type) -> Type where
-  Nil : {capacity : Nat } -> FVect capacity FZ elem
+  Nil : FVect capacity FZ elem
   
   ||| Cons an element to the FVect, increasing its capacity.
   ||| See (:::) for an operator that conses an element without
   ||| increasing capacity.
-  (::) : {capacity : Nat} 
-      -> {len : Fin (S capacity)} 
-      -> (x : elem) 
+  (::) : (x : elem) 
       -> (xs : FVect capacity len elem) 
       -> FVect (S capacity) (FS len) elem
 
 %name FVect xs, ys, zs
+
+Uninhabited (FVect 0 (FS l) e) where
+  uninhabited [] impossible
+  uninhabited (x :: xs) impossible
 
 ||| Cons an element without increasing the capacity of the FVect.
 ||| You must make sure the capacity and length of the FVect being
@@ -40,7 +45,7 @@ data FVect : (capacity : Nat) -> (len : Fin (S capacity)) -> (elem : Type) -> Ty
 ||| stronger bounded Fin.
 public export
 (:::) : {n : Nat} 
-     -> {1 len' : Fin (S n)} 
+     -> {len' : Fin (S n)} 
      -> (v : elem) 
      -> FVect (S n) (weaken len') elem 
      -> FVect (S n) (FS len') elem
@@ -53,6 +58,13 @@ export
 empty : (capacity : Nat) -> FVect capacity FZ elem
 empty _ = []
 
+||| Create an FVect by replicating the given element
+||| enough to fill the needed length.
+export
+replicate : {capacity : Nat} -> (l : Fin (S capacity)) -> elem -> FVect capacity l elem
+replicate {capacity} FZ x = []
+replicate {capacity = (S k)} (FS y) x = x :: replicate y x
+
 ||| Allow FVect to hold one more element. 
 ||| Do not change the elements currently in the FVect.
 public export
@@ -63,9 +75,7 @@ addCapacity (x :: xs) = x :: (addCapacity xs)
 ||| Allow FVect to hold n more elements. 
 ||| Do not change the elements currently in the FVect.
 public export
-addCapacityN : {0 capacity : Nat} 
-            -> {0 l : Fin (S capacity)} 
-            -> (n : Nat) 
+addCapacityN : (n : Nat) 
             -> FVect capacity l a 
             -> (FVect (capacity + n) (weakenN n l) a)
 addCapacityN n [] = Nil
@@ -74,26 +84,19 @@ addCapacityN n (x :: xs) = x :: (addCapacityN n xs)
 ||| Reduce the FVect's capacity to hold elements.
 public export
 removeCapacity : {n : Nat} 
-              -> {1 len' : Fin (S n)} 
+              -> {len' : Fin (S n)} 
               -> FVect (S n) (weaken len') a 
               -> FVect n len' a
 removeCapacity {n = n}     {len' = FZ}      [] = []
 removeCapacity {n = 0}     {len' = (FS l')} (x :: xs) = absurd l'
 removeCapacity {n = (S k)} {len' = (FS l')} (x :: xs) = x :: (removeCapacity xs)
 
-||| Get the length of the FVect.
-||| Returns a Fin n where n is the capacity of the FVect.
+||| Calculate the length of the FVect.
 export
-length : {0 capacity : Nat} 
-      -> {1 l : Fin (S capacity)} 
-      -> FVect capacity l a 
-      -> Fin (S capacity)
-length _ = l
-
-||| Get the capacity of the FVect.
-export
-capacity : {1 c: Nat} -> {0 l : Fin (S c)} -> FVect c l a -> Nat
-capacity _ = c
+length : FVect capacity l a 
+      -> Nat
+length [] = 0
+length (x :: xs) = S (length xs)
 
 --
 -- to/from List and Vect
@@ -101,7 +104,7 @@ capacity _ = c
 
 ||| Get the smallest FVect that can contain the given Vect.
 export
-fromVect : {l : Nat} -> Vect l a -> FVect l (last {n=l}) a
+fromVect : Vect l a -> FVect l (last {n=l}) a
 fromVect [] = []
 fromVect (x :: xs) = x :: fromVect xs
 
@@ -181,6 +184,17 @@ Functor (FVect c l) where
   map f (x :: xs) = f x :: map f xs
 
 --
+-- Applicative
+--
+
+export
+{capacity : Nat} -> {l : Fin (S capacity)} -> Applicative (FVect capacity l) where
+  pure = replicate _
+
+  [] <*> [] = []
+  (f :: fs) <*> (x :: xs) = f x :: (fs <*> xs)
+
+--
 -- Foldable
 --
 
@@ -217,8 +231,7 @@ DecEq elem => DecEq (FVect c l elem) where
 ||| carry out this operation and retain proof that the new FVect
 ||| length is less than or equal to that of the original FVect.
 export
-catMaybes : {capacity : Nat} 
-         -> {len : Fin (S capacity)} 
+catMaybes : {len : Fin (S capacity)} 
          -> FVect capacity len (Maybe elem) 
          -> (len' : Fin (S capacity) ** FVect capacity len' elem)
 catMaybes {len = FZ} [] = (FZ ** [])
@@ -232,8 +245,7 @@ catMaybes {len = (FS k)} ((Just x) :: xs) = let (l' ** rest) = catMaybes xs in
 ||| carry out this operation and retain proof that the new FVect
 ||| length is less than or equal to that of the original FVect.
 export
-mapMaybes : {capacity : Nat}
-         -> {len : Fin (S capacity)}
+mapMaybes : {len : Fin (S capacity)}
          -> (f : elem -> Maybe elem')
          -> FVect capacity len elem
          -> (len' : Fin (S capacity) ** FVect capacity len' elem')
@@ -249,9 +261,7 @@ mapMaybes {len = (FS k)} f (x :: xs) = case (f x) of
 ||| carry out this operation and retain proof that the new FVect
 ||| length is less than or equal to that of the original FVect.
 export
-filter : {capacity : Nat}
-      -> {len : Fin (S capacity)}
-      -> (elem -> Bool)
+filter : (elem -> Bool)
       -> FVect capacity len elem
       -> (len' : Fin (S capacity) ** FVect capacity len' elem)
 filter p [] = (FZ ** [])
@@ -259,5 +269,4 @@ filter p (x :: xs) = let (l' ** rest) = filter p xs in
                          if p x
                             then (FS l' ** x :: rest)
                             else (weaken l' ** addCapacity rest)
-
 
