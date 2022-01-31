@@ -20,3 +20,5 @@ clean:
 install:
 	$(IDRIS) --install $(PACKAGE)
 	
+install-with-src:
+	$(IDRIS) --install-with-src $(PACKAGE)
