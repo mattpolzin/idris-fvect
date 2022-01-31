@@ -1,4 +1,4 @@
-module FVect
+module Data.FVect
 
 import Data.Vect
 import Data.Fin
