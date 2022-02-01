@@ -53,6 +53,32 @@ public export
 (:::) {n = 0}     {len' = (FS l')} _ _ = absurd l'
 (:::) {n = (S k)} {len' = (FS l')} v (x :: xs) = v :: (x ::: xs)
 
+public export
+strengthenLT : {0 n : _}
+            -> (j : Fin (S n))
+            -> (0 prf : (finToNat j) `LT` n) =>
+               Fin n
+strengthenLT FZ @{(LTESucc _)} = FZ
+strengthenLT (FS x) @{(LTESucc _)} = FS (strengthenLT x)
+
+weakenStrengthenCancel : {0 n : _} -> (x : Fin (S n)) -> (0 prf : (finToNat x) `LT` n)  => (weaken (strengthenLT x)) = x
+weakenStrengthenCancel FZ @{(LTESucc y)} = Refl
+weakenStrengthenCancel (FS x) @{(LTESucc y)} = cong FS (weakenStrengthenCancel x)
+
+||| Like `(:::)`, cons an element onto an FVect without changing its capacity.
+|||
+||| You need only know that the existing FVect is not at capacity to know that
+||| an element can be consed onto it without increasing the capacity.
+public export
+consLT : {n : Nat}
+      -> {len : Fin (S (S n))}
+      -> (0 ltPrf : (finToNat len) `LT` (S n)) =>
+         (v : elem)
+      -> FVect (S n) len elem
+      -> FVect (S n) (FS (strengthenLT len)) elem
+consLT v xs with (weakenStrengthenCancel len)
+  consLT v xs | cancelPrf = v ::: (rewrite cancelPrf in xs)
+
 ||| Create an empty FVect with the given capacity.
 export
 empty : (capacity : Nat) -> FVect capacity FZ elem
@@ -173,6 +199,14 @@ fVectInjective : {0 xs : FVect c l elem}
               -> x :: xs = y :: ys 
               -> (x = y, xs = ys)
 fVectInjective Refl = (Refl, Refl)
+
+||| If you add and then remove capacity, you are left with the original capacity.
+||| In fact, you are left with exactly the original FVect.
+export
+addRemoveCapacityInverse : (xs : FVect c l elem)
+                        -> (removeCapacity (addCapacity xs)) = xs
+addRemoveCapacityInverse [] = Refl
+addRemoveCapacityInverse (x :: xs) = cong (x ::) (addRemoveCapacityInverse xs)
 
 --
 -- Functor
