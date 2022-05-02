@@ -5,7 +5,6 @@ import Data.Fin
 import Data.Nat
 import Decidable.Equality
 
-%hide Data.Vect.elem
 %hide Prelude.Types.elem
 
 %default total
