@@ -9,6 +9,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    idrisLsp = {
+      url = "github:idris-community/idris2-lsp";
+      inputs.alejandra.follows = "alejandra";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.idris.follows = "idris";
+    };
+
     alejandra = {
       url = "github:kamadorueda/alejandra";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -19,6 +26,7 @@
     self,
     nixpkgs,
     idris,
+    idrisLsp,
     alejandra,
   }: let
     inherit (nixpkgs) lib;
@@ -32,6 +40,15 @@
       packages.${system} = {
         withSource = self.fvect.${system} {withSource = true;};
         default = self.fvect.${system} {};
+      };
+
+      devShells.${system}.default = nixpkgs.legacyPackages.${system}.mkShell {
+        inputsFrom = [
+          self.packages.${system}.default
+        ];
+        packages = [
+          idrisLsp.packages.${system}.default
+        ];
       };
 
       formatter.${system} = alejandra.packages.${system}.default;

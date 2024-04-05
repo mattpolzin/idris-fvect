@@ -116,6 +116,58 @@
         "type": "github"
       }
     },
+    "idrisLsp": {
+      "inputs": {
+        "alejandra": [
+          "alejandra"
+        ],
+        "idris": [
+          "idris"
+        ],
+        "lsp-lib": "lsp-lib",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1710049273,
+        "narHash": "sha256-B5Chc7Le/c7z5lUUXtmzp7g2jmqIGQE29pHMVR1fc3Y=",
+        "owner": "idris-community",
+        "repo": "idris2-lsp",
+        "rev": "07e751bb6372b496844ba0fc22c1692b22e98919",
+        "type": "github"
+      },
+      "original": {
+        "owner": "idris-community",
+        "repo": "idris2-lsp",
+        "type": "github"
+      }
+    },
+    "lsp-lib": {
+      "inputs": {
+        "idris": [
+          "idrisLsp",
+          "idris"
+        ],
+        "nixpkgs": [
+          "idrisLsp",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1705902050,
+        "narHash": "sha256-ICW9oOOP70hXneJFYInuPY68SZTDw10dSxSPTW4WwWM=",
+        "owner": "idris-community",
+        "repo": "LSP-lib",
+        "rev": "03851daae0c0274a02d94663d8f53143a94640da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "idris-community",
+        "repo": "LSP-lib",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1712192574,
@@ -136,6 +188,7 @@
       "inputs": {
         "alejandra": "alejandra",
         "idris": "idris",
+        "idrisLsp": "idrisLsp",
         "nixpkgs": "nixpkgs"
       }
     },
