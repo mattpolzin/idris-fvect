@@ -1,7 +1,7 @@
 module Data.FVect
 
 import Data.Vect
-import Data.Fin
+import public Data.Fin
 import Data.Nat
 import Decidable.Equality
 
