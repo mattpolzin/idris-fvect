@@ -2,7 +2,8 @@
 package fvect
 sourcedir = "src"
 modules = Data.FVect
-version = 0.1.0
+        , Data.FVect.Capacity
+version = 0.2.0
 authors = "Mathew Polzin"
 license = "MIT"
 sourceloc = "https://github.com/mattpolzin/idris-fvect"
