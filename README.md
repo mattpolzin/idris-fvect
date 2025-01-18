@@ -1,5 +1,5 @@
 
-The starts of an Idris 2 FVect (Fin-based Vect) type and its utility functions.
+An Idris 2 FVect (Fin-based Vect) type and its utility functions.
 
 The idea is to have a Vect type that knows not only how long it currently is but also the longest it ever could be. One reasonable interpretation of the latter is "capacity."
 
